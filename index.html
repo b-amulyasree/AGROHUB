@@ -22,7 +22,11 @@
   };
 </script>
 
-<!-- Firebase SDKs -->
+<input id="email" type="email" placeholder="Email"><br><br>
+<input id="password" type="password" placeholder="Password"><br><br>
+
+<button onclick="signup()">Signup</button>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -36,16 +40,20 @@
     appId:             1:542306944784:web:1735b3ca3f6c7eb4174795,
   };
 
+ 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
+  // 🔥 MAKE FUNCTION GLOBAL
   window.signup = function () {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
+    console.log(auth); // DEBUG
+
     createUserWithEmailAndPassword(auth, email, password)
       .then(() => alert("User Created ✅"))
-      .catch(err => alert(err.message));
+      .catch((error) => alert(error.message));
   };
 </script>
 
