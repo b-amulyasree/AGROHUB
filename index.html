@@ -43,9 +43,9 @@
     appId:             1:542306944784:web:1735b3ca3f6c7eb4174795,
   };
 
-  const App  = initializeApp(firebaseConfig);
-  const auth   = getAuth(App);
-  const db     = getFirestore(App);
+  const FBApp  = initializeApp(firebaseConfig);
+  const auth   = getAuth(FBApp);
+  const db     = getFirestore(FBApp);
 
   // Make globally available
   window.FB = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword,
