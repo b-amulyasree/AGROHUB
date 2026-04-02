@@ -20,17 +20,11 @@
     GROQ_API_KEY:            "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",          // https://console.groq.com
     OPENWEATHER_API_KEY:     "338ad154be0e10acab9f03b36863b3e9",   // https://openweathermap.org/api
   };
-</script>
-
-<input id="email" type="email" placeholder="Email"><br><br>
-<input id="password" type="password" placeholder="Password"><br><br>
-
-<button onclick="signup()">Signup</button>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
   const firebaseConfig = {
     apiKey:           AIzaSyD5EvtdcUO9U0Bp97TzcmqiLzmayOBTlCg,
     authDomain:        agrohub-6454a.firebaseapp.com,
@@ -39,23 +33,18 @@
     messagingSenderId: 542306944784,
     appId:             1:542306944784:web:1735b3ca3f6c7eb4174795,
   };
-
- 
-  const app = initializeApp(firebaseConfig);
+ const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // 🔥 MAKE FUNCTION GLOBAL
-  window.signup = function () {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    console.log(auth); // DEBUG
-
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(() => alert("User Created ✅"))
-      .catch((error) => alert(error.message));
+  // 🔥 ONE BUTTON TEST (no HTML needed)
+  window.testSignup = function () {
+    createUserWithEmailAndPassword(auth, "test123@gmail.com", "123456")
+      .then(() => alert("WORKING ✅"))
+      .catch(err => alert(err.message));
   };
 </script>
+
+<button onclick="testSignup()">TEST FIREBASE</button>
 
 <link href="https://fonts.googleapis.com/css2?family=Tiro+Telugu&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
