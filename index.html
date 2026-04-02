@@ -36,22 +36,16 @@
     appId:             1:542306944784:web:1735b3ca3f6c7eb4174795,
   };
 
-  const FBApp  = initializeApp(firebaseConfig);
-  const auth   = getAuth(FBApp);
-  const db     = getFirestore(FBApp);
-
-  // Make globally available
- const app = initializeApp(firebaseConfig);
+  const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // 🔥 MUST BE window.signup (VERY IMPORTANT)
   window.signup = function () {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
     createUserWithEmailAndPassword(auth, email, password)
       .then(() => alert("User Created ✅"))
-      .catch((error) => alert(error.message));
+      .catch(err => alert(err.message));
   };
 </script>
 
