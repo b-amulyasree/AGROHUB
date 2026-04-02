@@ -24,15 +24,8 @@
 
 <!-- Firebase SDKs -->
 <script type="module">
-  import { initializeApp }                    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword,
-           createUserWithEmailAndPassword,
-           onAuthStateChanged, signOut }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc,
-           collection, addDoc, getDocs,
-           onSnapshot, query, orderBy,
-           serverTimestamp, deleteDoc,
-           updateDoc }                         from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey:           AIzaSyD5EvtdcUO9U0Bp97TzcmqiLzmayOBTlCg,
@@ -48,10 +41,18 @@
   const db     = getFirestore(FBApp);
 
   // Make globally available
-  window.FB = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-                onAuthStateChanged, signOut, doc, setDoc, getDoc,
-                collection, addDoc, getDocs, onSnapshot, query,
-                orderBy, serverTimestamp, deleteDoc, updateDoc };
+ const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // 🔥 MUST BE window.signup (VERY IMPORTANT)
+  window.signup = function () {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(() => alert("User Created ✅"))
+      .catch((error) => alert(error.message));
+  };
 </script>
 
 <link href="https://fonts.googleapis.com/css2?family=Tiro+Telugu&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
