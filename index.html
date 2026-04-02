@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AGROHUB – Smart Farming</title>
+
+<!-- ══════════════════════════════════════════════════════
+     API KEYS — FILL THESE IN MANUALLY
+     ══════════════════════════════════════════════════════ -->
+<script>
+  const API_KEYS = {
+    FIREBASE_API_KEY:        "AIzaSyD5EvtdcUO9U0Bp97TzcmqiLzmayOBTlCg",
+    FIREBASE_AUTH_DOMAIN:    "agrohub-6454a.firebaseapp.com",
+    FIREBASE_PROJECT_ID:     ""agrohub-6454a",
+    FIREBASE_STORAGE_BUCKET: "agrohub-6454a.firebasestorage.app",
+    FIREBASE_MSG_SENDER_ID:  "542306944784",
+    FIREBASE_APP_ID:         "1:542306944784:web:1735b3ca3f6c7eb4174795",
+
+    GROQ_API_KEY:            "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",          // https://console.groq.com
+    OPENWEATHER_API_KEY:     "338ad154be0e10acab9f03b36863b3e9",   // https://openweathermap.org/api
+  };
+</script>
+
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp }                    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword,
+           createUserWithEmailAndPassword,
+           onAuthStateChanged, signOut }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc,
+           collection, addDoc, getDocs,
+           onSnapshot, query, orderBy,
+           serverTimestamp, deleteDoc,
+           updateDoc }                         from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:            API_KEYS.FIREBASE_API_KEY,
+    authDomain:        API_KEYS.FIREBASE_AUTH_DOMAIN,
+    projectId:         API_KEYS.FIREBASE_PROJECT_ID,
+    storageBucket:     API_KEYS.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: API_KEYS.FIREBASE_MSG_SENDER_ID,
+    appId:             API_KEYS.FIREBASE_APP_ID,
+  };
+
+  const fbApp  = initializeApp(firebaseConfig);
+  const auth   = getAuth(fbApp);
+  const db     = getFirestore(fbApp);
+
+  // Make globally available
+  window.FB = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+                onAuthStateChanged, signOut, doc, setDoc, getDoc,
+                collection, addDoc, getDocs, onSnapshot, query,
+                orderBy, serverTimestamp, deleteDoc, updateDoc };
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Telugu&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════ DESIGN TOKENS ═══════════════════════════ */
+:root {
+  --green:       #2d6a4f;
+  --green-l:     #40916c;
+  --green-xl:    #74c69d;
+  --leaf:        #b7e4c7;
+  --earth:       #7c5e40;
+  --earth-l:     #c9a96e;
+  --sky:         #0096c7;
+  --sky-l:       #48cae4;
+  --amber:       #f4a261;
+  --red:         #e63946;
+  --bg:          #f0f7f4;
+  --card:        #ffffff;
+  --text:        #1b2e22;
+  --muted:       #6b8f71;
+  --border:      #d4e9dc;
+  --shadow:      0 2px 12px rgba(45,106,79,.10);
+  --shadow-lg:   0 8px 32px rgba(45,106,79,.18);
+  --radius:      16px;
+  --radius-sm:   10px;
+  --font:        'Nunito', sans-serif;
+  --font-te:     'Tiro Telugu', serif;
+}
+
+/* ═══════════════════════════ RESET ═══════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 15px; overflow-x: hidden; }
+img { max-width: 100%; }
+button { cursor: pointer; font-family: var(--font); }
+input, textarea, select { font-family: var(--font); }
+a { text-decoration: none; color: inherit; }
+
+/* ═══════════════════════════ UTILITY ═════════════════════════════════ */
+.hidden { display: none !important; }
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-green { background: var(--leaf); color: var(--green); }
+.badge-red   { background: #fde; color: var(--red); }
+.badge-sky   { background: #d0f0f8; color: var(--sky); }
+.btn { border: none; border-radius: var(--radius-sm); padding: 11px 20px; font-weight: 700; font-size: 14px; transition: all .2s; }
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: var(--green-l); transform: translateY(-1px); }
+.btn-outline { background: transparent; border: 2px solid var(--green); color: var(--green); }
+.btn-outline:hover { background: var(--green); color: #fff; }
+.btn-red { background: var(--red); color: #fff; }
+.btn-sky { background: var(--sky); color: #fff; }
+.btn-amber { background: var(--amber); color: #fff; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.section-title { font-size: 17px; font-weight: 800; color: var(--green); margin-bottom: 12px; }
+.w-full { width: 100%; }
+.text-sm { font-size: 13px; }
+.text-muted { color: var(--muted); }
+
+/* ═══════════════════════════ LANGUAGE TOGGLE ════════════════════════ */
+.lang-en .te, .lang-te .en { display: none; }
+.lang-te { font-family: var(--font-te), var(--font); }
+
+/* ═══════════════════════════ TOP BAR ════════════════════════════════ */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-l) 100%);
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(0,0,0,.2);
+}
+#topbar .logo { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
+#topbar .logo span { color: var(--earth-l); }
+.topbar-actions { display: flex; gap: 10px; align-items: center; }
+.topbar-btn { background: rgba(255,255,255,.15); border: none; color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 13px; font-weight: 700; }
+.topbar-btn:hover { background: rgba(255,255,255,.25); }
+#notif-dot { background: var(--red); width: 8px; height: 8px; border-radius: 50%; position: absolute; top: 4px; right: 4px; }
+
+/* ═══════════════════════════ BOTTOM NAV ════════════════════════════ */
+#bottomnav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: var(--card); border-top: 1.5px solid var(--border);
+  display: flex; justify-content: space-around;
+  padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+}
+.nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 12px; border: none; background: none; color: var(--muted); font-size: 10px; font-weight: 700; transition: color .2s; }
+.nav-item.active, .nav-item:hover { color: var(--green); }
+.nav-item i { font-size: 20px; }
+
+/* ═══════════════════════════ SCREENS ════════════════════════════════ */
+#app { padding-top: 58px; padding-bottom: 70px; min-height: 100vh; }
+.screen { display: none; animation: fadeUp .3s ease; }
+.screen.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* ═══════════════════════════ AUTH SCREENS ═══════════════════════════ */
+#auth-wrap {
+  min-height: 100vh;
+  background: linear-gradient(160deg, var(--green) 0%, var(--green-l) 40%, var(--sky-l) 100%);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.auth-card { background: #fff; border-radius: 24px; padding: 32px 28px; width: 100%; max-width: 400px; box-shadow: var(--shadow-lg); }
+.auth-logo { font-size: 26px; font-weight: 900; color: var(--green); text-align: center; margin-bottom: 6px; }
+.auth-sub { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+.auth-tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 20px; }
+.auth-tab { flex: 1; border: none; background: none; border-radius: 8px; padding: 8px; font-weight: 700; font-size: 13px; color: var(--muted); transition: all .2s; }
+.auth-tab.active { background: var(--green); color: #fff; }
+.form-group { margin-bottom: 14px; }
+.form-group label { font-size: 12px; font-weight: 700; color: var(--muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+.form-group input, .form-group select { width: 100%; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; outline: none; transition: border .2s; }
+.form-group input:focus, .form-group select:focus { border-color: var(--green); }
+.auth-divider { text-align: center; margin: 16px 0; color: var(--muted); font-size: 12px; }
+.admin-badge-auth { background: #fff3cd; border: 1px solid #f4a261; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #7c5e40; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+#auth-msg { font-size: 13px; color: var(--red); text-align: center; min-height: 18px; margin-top: 8px; }
+
+/* ═══════════════════════════ HOME SCREEN ════════════════════════════ */
+#screen-home { padding: 16px; }
+.greeting-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.greeting-text h2 { font-size: 20px; font-weight: 900; }
+.greeting-text p { font-size: 13px; color: var(--muted); }
+.avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+
+/* Home blocks */
+.home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.home-block { border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden; }
+.home-block.full { grid-column: 1 / -1; }
+.block-icon { font-size: 28px; margin-bottom: 8px; }
+.block-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; opacity: .75; }
+.block-val { font-size: 22px; font-weight: 900; margin: 2px 0; }
+.block-sub { font-size: 12px; opacity: .8; }
+.block-weather { background: linear-gradient(135deg, #0096c7 0%, #48cae4 100%); color: #fff; }
+.block-crop { background: linear-gradient(135deg, #2d6a4f 0%, #74c69d 100%); color: #fff; }
+.block-soil { background: linear-gradient(135deg, #7c5e40 0%, #c9a96e 100%); color: #fff; }
+.block-alert { background: linear-gradient(135deg, #e63946 0%, #f4a261 100%); color: #fff; }
+.block-rotation { background: linear-gradient(135deg, #1b4332 0%, #40916c 100%); color: #fff; }
+.block-advisory { background: linear-gradient(135deg, #023e8a 0%, #0096c7 100%); color: #fff; }
+.block-market { background: linear-gradient(135deg, #6a0572 0%, #c77dff 100%); color: #fff; }
+.block-bg-icon { position: absolute; right: -10px; bottom: -10px; font-size: 64px; opacity: .12; }
+
+/* Admin alert strip */
+.alert-strip { background: #fff3cd; border-left: 4px solid var(--amber); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: flex-start; gap: 10px; }
+.alert-strip i { color: var(--amber); margin-top: 2px; }
+
+/* ═══════════════════════════ WEATHER / CALENDAR SCREEN ══════════════ */
+#screen-weather { padding: 16px; }
+.weather-header { background: linear-gradient(135deg, #0077b6 0%, #48cae4 100%); border-radius: var(--radius); padding: 20px; color: #fff; margin-bottom: 16px; }
+.weather-main-temp { font-size: 56px; font-weight: 900; line-height: 1; }
+.weather-desc { font-size: 16px; opacity: .9; margin-top: 4px; }
+.weather-stats { display: flex; gap: 20px; margin-top: 14px; }
+.weather-stat { font-size: 13px; opacity: .85; }
+.weather-stat i { margin-right: 4px; }
+
+/* Calendar */
+.calendar-wrap { margin-bottom: 16px; }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-month { font-size: 18px; font-weight: 800; color: var(--green); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day-label { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); padding: 4px 0; }
+.cal-day { text-align: center; border-radius: 8px; padding: 6px 4px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; position: relative; min-height: 48px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.cal-day:hover { background: var(--leaf); }
+.cal-day.today { background: var(--green); color: #fff; }
+.cal-day.selected { background: var(--sky); color: #fff; box-shadow: 0 2px 8px rgba(0,150,199,.3); }
+.cal-day.empty { cursor: default; }
+.cal-mini-temp { font-size: 9px; font-weight: 600; opacity: .8; }
+.cal-rain-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sky-l); }
+.cal-rain-dot.active { background: var(--sky); }
+.cal-reminder-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); }
+
+/* Day detail panel */
+#day-detail { background: var(--card); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.day-detail-title { font-size: 17px; font-weight: 800; color: var(--green); margin-bottom: 14px; }
+.hourly-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+.hourly-card { min-width: 70px; background: var(--bg); border-radius: 12px; padding: 10px 8px; text-align: center; flex-shrink: 0; border: 1.5px solid var(--border); }
+.hourly-time { font-size: 11px; color: var(--muted); font-weight: 700; }
+.hourly-icon { font-size: 20px; margin: 4px 0; }
+.hourly-temp { font-size: 15px; font-weight: 800; color: var(--green); }
+.hourly-rain { font-size: 10px; color: var(--sky); margin-top: 2px; }
+
+/* Reminders */
+.reminder-section { margin-top: 14px; }
+.reminder-item { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.reminder-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+.reminder-text { flex: 1; font-size: 13px; font-weight: 600; }
+.reminder-time { font-size: 11px; color: var(--muted); }
+.reminder-del { background: none; border: none; color: var(--red); font-size: 14px; }
+.add-reminder-row { display: flex; gap: 8px; margin-top: 10px; }
+.add-reminder-row input { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+.add-reminder-row input[type="time"] { max-width: 100px; }
+
+/* ═══════════════════════════ AI CROP SCAN ═══════════════════════════ */
+#screen-scan { padding: 16px; }
+.scan-card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.camera-area { border: 2px dashed var(--border); border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: border .2s; }
+.camera-area:hover { border-color: var(--green); }
+.camera-area i { font-size: 48px; color: var(--green-xl); }
+#preview-img { width: 100%; border-radius: 10px; margin-top: 12px; display: none; }
+.voice-btn { width: 56px; height: 56px; border-radius: 50%; background: var(--sky); color: #fff; border: none; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,150,199,.3); transition: all .2s; }
+.voice-btn.recording { background: var(--red); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); box-shadow: 0 4px 12px rgba(230,57,70,.3); } 50% { transform: scale(1.08); box-shadow: 0 6px 20px rgba(230,57,70,.5); } }
+.ai-result { background: linear-gradient(135deg, #f0f7f4 0%, #d8f3dc 100%); border-radius: 12px; padding: 16px; border: 1.5px solid var(--leaf); margin-top: 14px; }
+.ai-result-title { font-weight: 800; color: var(--green); margin-bottom: 8px; }
+.ai-result-text { font-size: 13px; line-height: 1.6; color: var(--text); }
+.groq-loader { display: flex; align-items: center; gap: 10px; padding: 16px; color: var(--muted); font-size: 13px; }
+.groq-loader .dots span { display: inline-block; width: 6px; height: 6px; background: var(--green); border-radius: 50%; margin: 0 2px; animation: blink 1.2s infinite; }
+.groq-loader .dots span:nth-child(2) { animation-delay: .2s; }
+.groq-loader .dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,80%,100% { opacity: .2; } 40% { opacity: 1; } }
+
+/* ═══════════════════════════ FARM FIELDS ════════════════════════════ */
+#screen-farms { padding: 16px; }
+.field-card { background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 14px; border-left: 5px solid var(--green); }
+.field-name { font-size: 17px; font-weight: 800; }
+.field-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.field-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.field-tag { background: var(--leaf); color: var(--green); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 700; }
+.add-field-btn { background: var(--green); color: #fff; border: none; border-radius: var(--radius); padding: 14px; width: 100%; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* Field form modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: flex; align-items: flex-end; }
+.modal-sheet { background: var(--card); border-radius: 24px 24px 0 0; padding: 24px 20px 40px; width: 100%; max-height: 90vh; overflow-y: auto; animation: slideUp .3s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: none; } }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+.modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+
+/* ═══════════════════════════ COMMUNITY ══════════════════════════════ */
+#screen-community { padding: 16px; }
+.post-card { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 12px; }
+.post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.post-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0; }
+.post-author { font-weight: 700; font-size: 14px; }
+.post-time { font-size: 11px; color: var(--muted); }
+.post-body { font-size: 14px; line-height: 1.55; margin-bottom: 10px; }
+.post-actions { display: flex; gap: 16px; }
+.post-action-btn { background: none; border: none; color: var(--muted); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; transition: color .2s; }
+.post-action-btn:hover { color: var(--green); }
+.new-post-area { background: var(--card); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.new-post-area textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px; font-size: 14px; resize: none; outline: none; height: 70px; }
+.pending-badge { background: #fff3cd; color: #7c5e40; border: 1px solid var(--earth-l); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+
+/* ═══════════════════════════ ADMIN PANEL ════════════════════════════ */
+#screen-admin { padding: 16px; }
+.admin-header { background: linear-gradient(135deg, #1b2e22 0%, #2d6a4f 100%); color: #fff; border-radius: var(--radius); padding: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+.admin-header i { font-size: 28px; color: var(--earth-l); }
+.admin-header h2 { font-size: 18px; font-weight: 800; }
+.admin-header p { font-size: 12px; opacity: .75; }
+.admin-section { margin-bottom: 18px; }
+.admin-section-title { font-size: 14px; font-weight: 800; color: var(--earth); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.admin-alert-compose { background: var(--card); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.alert-type-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.alert-type-btn { border: 2px solid var(--border); background: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s; }
+.alert-type-btn.active { border-color: var(--green); background: var(--green); color: #fff; }
+.pending-product-card { background: var(--card); border-radius: var(--radius-sm); padding: 14px; box-shadow: var(--shadow); margin-bottom: 10px; border-left: 4px solid var(--amber); }
+.pending-product-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+/* ═══════════════════════════ MARKET PRICES ══════════════════════════ */
+.market-table { width: 100%; border-collapse: collapse; }
+.market-table th { background: var(--green); color: #fff; padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; }
+.market-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.market-table tr:last-child td { border: none; }
+.price-up { color: #2d6a4f; font-weight: 700; }
+.price-down { color: var(--red); font-weight: 700; }
+
+/* ═══════════════════════════ SOIL HEALTH ════════════════════════════ */
+.soil-meter { background: var(--bg); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.soil-meter-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.meter-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.meter-fill { height: 100%; border-radius: 4px; transition: width .8s ease; }
+.fill-green { background: linear-gradient(90deg, var(--green-xl), var(--green)); }
+.fill-amber { background: linear-gradient(90deg, #ffd166, var(--amber)); }
+.fill-sky   { background: linear-gradient(90deg, var(--sky-l), var(--sky)); }
+.fill-earth { background: linear-gradient(90deg, var(--earth-l), var(--earth)); }
+
+/* ═══════════════════════════ TOAST ═══════════════════════════════════ */
+#toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1b2e22; color: #fff; border-radius: 30px; padding: 10px 20px; font-size: 13px; font-weight: 700; z-index: 999; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ═══════════════════════════ PROFILE SCREEN ═════════════════════════ */
+#screen-profile { padding: 16px; }
+.profile-hero { background: linear-gradient(135deg, var(--green) 0%, var(--green-l) 100%); border-radius: var(--radius); padding: 24px; color: #fff; text-align: center; margin-bottom: 16px; }
+.profile-avatar-lg { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,.2); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; margin: 0 auto 12px; border: 3px solid rgba(255,255,255,.4); }
+.profile-name { font-size: 20px; font-weight: 800; }
+.profile-meta { font-size: 13px; opacity: .8; margin-top: 4px; }
+.trust-score { background: rgba(255,255,255,.15); border-radius: 10px; padding: 8px 16px; margin-top: 14px; display: inline-block; font-size: 14px; font-weight: 700; }
+.stars { color: #ffd166; }
+.settings-list { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.settings-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.settings-item:last-child { border: none; }
+.settings-item-left { display: flex; align-items: center; gap: 12px; }
+.settings-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.si-green { background: var(--leaf); color: var(--green); }
+.si-sky { background: #d0f0f8; color: var(--sky); }
+.si-amber { background: #fff3cd; color: var(--earth); }
+.si-red { background: #fde; color: var(--red); }
+.settings-item-label { font-size: 14px; font-weight: 700; }
+.settings-item-sub { font-size: 11px; color: var(--muted); }
+.toggle-switch { width: 42px; height: 24px; background: var(--border); border-radius: 12px; position: relative; cursor: pointer; transition: background .2s; }
+.toggle-switch.on { background: var(--green); }
+.toggle-knob { width: 20px; height: 20px; background: #fff; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: left .2s; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+.toggle-switch.on .toggle-knob { left: 20px; }
+
+/* ═══════════════════════════ OFFLINE BANNER ═════════════════════════ */
+#offline-banner { background: var(--earth); color: #fff; text-align: center; padding: 6px; font-size: 12px; font-weight: 700; position: fixed; top: 58px; left: 0; right: 0; z-index: 99; display: none; }
+
+/* ═══════════════════════════ SCROLLBAR ══════════════════════════════ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body class="lang-en">
+
+<!-- ══════════════════════════════════════════════════════════════════
+     AUTH WRAPPER
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">🌾 <span>Krishi</span>Mitra</div>
+    <p class="auth-sub">
+      <span class="en">Smart Farming Assistant</span>
+      <span class="te">స్మార్ట్ వ్యవసాయ సహాయకుడు</span>
+    </p>
+
+    <!-- Role selector -->
+    <div class="auth-tabs" id="role-tabs">
+      <button class="auth-tab active" onclick="switchRole('farmer')" id="tab-farmer">
+        🧑‍🌾 <span class="en">Farmer</span><span class="te">రైతు</span>
+      </button>
+      <button class="auth-tab" onclick="switchRole('admin')" id="tab-admin">
+        🛡️ <span class="en">Admin</span><span class="te">నిర్వాహకుడు</span>
+      </button>
+    </div>
+
+    <!-- Admin notice -->
+    <div class="admin-badge-auth hidden" id="admin-notice">
+      <i class="fas fa-shield-alt"></i>
+      <span class="en">Admin login is restricted to authorized personnel only.</span>
+      <span class="te">అడ్మిన్ లాగిన్ అధికారిక సిబ్బందికి మాత్రమే పరిమితం.</span>
+    </div>
+
+    <!-- Auth mode tabs -->
+    <div class="auth-tabs" id="auth-mode-tabs">
+      <button class="auth-tab active" onclick="switchAuthMode('login')" id="tab-login">
+        <span class="en">Login</span><span class="te">లాగిన్</span>
+      </button>
+      <button class="auth-tab" onclick="switchAuthMode('register')" id="tab-register">
+        <span class="en">Register</span><span class="te">నమోదు</span>
+      </button>
+    </div>
+
+    <!-- Farmer name (register only) -->
+    <div class="form-group hidden" id="name-group">
+      <label><span class="en">Full Name</span><span class="te">పూర్తి పేరు</span></label>
+      <input type="text" id="auth-name" placeholder="Your name">
+    </div>
+    <div class="form-group">
+      <label><span class="en">Email</span><span class="te">ఇమెయిల్</span></label>
+      <input type="email" id="auth-email" placeholder="email@example.com">
+    </div>
+    <div class="form-group">
+      <label><span class="en">Password</span><span class="te">పాస్‌వర్డ్</span></label>
+      <input type="password" id="auth-password" placeholder="••••••••">
+    </div>
+
+    <div id="auth-msg"></div>
+    <button class="btn btn-green w-full mt-3" id="auth-submit-btn" onclick="handleAuth()">
+      <span class="en">Login</span><span class="te">లాగిన్</span>
+    </button>
+
+    <!-- Language toggle inside auth -->
+    <div style="text-align:center;margin-top:18px;">
+      <button class="topbar-btn" style="background:var(--bg);color:var(--green);border:1.5px solid var(--border);" onclick="toggleLang()">
+        🌐 EN / తె
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     OFFLINE BANNER
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="offline-banner">📡 <span class="en">Offline – Using cached data</span><span class="te">ఆఫ్‌లైన్ – కాష్ డేటా వాడుతున్నారు</span></div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     MAIN APP (hidden until logged in)
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="app" class="hidden">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="logo">🌾 <span>Krishi</span>Mitra</div>
+    <div class="topbar-actions">
+      <button class="topbar-btn" onclick="toggleLang()">🌐 EN/తె</button>
+      <div style="position:relative;">
+        <button class="topbar-btn" onclick="showScreen('notifications')">
+          <i class="fas fa-bell"></i>
+          <div id="notif-dot" class="hidden"></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: HOME ══════════════════════════════════════════════ -->
+  <div id="screen-home" class="screen active">
+    <div class="greeting-bar">
+      <div class="greeting-text">
+        <h2 id="greeting-name">Good morning! 🌞</h2>
+        <p id="greeting-date">Thursday, 2 April 2026</p>
+      </div>
+      <div class="avatar" id="home-avatar">F</div>
+    </div>
+
+    <!-- Admin alert strip (shown if any active) -->
+    <div class="alert-strip" id="admin-alert-strip" style="display:none;">
+      <i class="fas fa-exclamation-triangle"></i>
+      <div>
+        <strong><span class="en">Admin Alert</span><span class="te">అడ్మిన్ హెచ్చరిక</span></strong>
+        <p id="admin-alert-text" style="font-size:13px;margin-top:2px;"></p>
+      </div>
+    </div>
+
+    <!-- HOME GRID BLOCKS -->
+    <div class="home-grid">
+      <!-- Weather block -->
+      <div class="home-block block-weather" onclick="showScreen('weather')">
+        <div class="block-icon">🌤️</div>
+        <div class="block-title"><span class="en">Weather</span><span class="te">వాతావరణం</span></div>
+        <div class="block-val" id="home-temp">--°C</div>
+        <div class="block-sub" id="home-weather-desc">Loading…</div>
+        <div class="block-bg-icon">☁️</div>
+      </div>
+
+      <!-- Crop Status block -->
+      <div class="home-block block-crop" onclick="showScreen('scan')">
+        <div class="block-icon">🌾</div>
+        <div class="block-title"><span class="en">Crop Status</span><span class="te">పంట స్థితి</span></div>
+        <div class="block-val" id="home-crop-name">Paddy</div>
+        <div class="block-sub"><span class="en">Tap to scan</span><span class="te">స్కాన్ చేయడానికి నొక్కండి</span></div>
+        <div class="block-bg-icon">🌱</div>
+      </div>
+
+      <!-- Soil Health block -->
+      <div class="home-block block-soil" onclick="showScreen('farms')">
+        <div class="block-icon">🌍</div>
+        <div class="block-title"><span class="en">Soil Health</span><span class="te">నేల ఆరోగ్యం</span></div>
+        <div class="block-val" id="home-soil-ph">pH 6.8</div>
+        <div class="block-sub"><span class="en">View fields</span><span class="te">పొలాలు చూడండి</span></div>
+        <div class="block-bg-icon">🏔️</div>
+      </div>
+
+      <!-- Alert block -->
+      <div class="home-block block-alert" onclick="showScreen('community')">
+        <div class="block-icon">⚠️</div>
+        <div class="block-title"><span class="en">Pest Alerts</span><span class="te">పురుగు హెచ్చరికలు</span></div>
+        <div class="block-val" id="home-pest-val">0</div>
+        <div class="block-sub"><span class="en">Active alerts</span><span class="te">చురుకైన హెచ్చరికలు</span></div>
+        <div class="block-bg-icon">🐛</div>
+      </div>
+
+      <!-- Crop Rotation block (full width) -->
+      <div class="home-block full block-rotation" onclick="showCropRotation()">
+        <div class="block-icon">🔄</div>
+        <div class="block-title"><span class="en">Crop Rotation Advisor</span><span class="te">పంట మార్పిడి సలహాదారు</span></div>
+        <div class="block-sub" id="rotation-hint" style="font-size:14px;margin-top:4px;">
+          <span class="en">Tap to get AI-based rotation suggestions based on your soil & water</span>
+          <span class="te">మీ నేల & నీటి ఆధారంగా AI సూచనలు పొందండి</span>
+        </div>
+        <div class="block-bg-icon">🌿</div>
+      </div>
+
+      <!-- Daily Advisory block (full width) -->
+      <div class="home-block full block-advisory">
+        <div class="block-icon">📋</div>
+        <div class="block-title"><span class="en">Today's Advisory</span><span class="te">నేటి సలహా</span></div>
+        <div id="advisory-text" style="font-size:13px;margin-top:6px;line-height:1.6;">
+          <span class="en">Loading personalized advisory…</span>
+          <span class="te">వ్యక్తిగత సలహా లోడ్ అవుతోంది…</span>
+        </div>
+        <div class="block-bg-icon">📝</div>
+      </div>
+
+      <!-- Market Prices block (full width) -->
+      <div class="home-block full block-market" onclick="showScreen('market')">
+        <div class="block-icon">💹</div>
+        <div class="block-title"><span class="en">Market Prices</span><span class="te">మార్కెట్ ధరలు</span></div>
+        <div class="block-sub"><span class="en">Paddy ₹2100/q · Cotton ₹7200/q · Maize ₹1950/q</span></div>
+        <div class="block-bg-icon">📊</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: WEATHER + CALENDAR ══════════════════════════════════ -->
+  <div id="screen-weather" class="screen">
+    <!-- Current weather -->
+    <div class="weather-header">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+        <div>
+          <div style="font-size:13px;opacity:.75;margin-bottom:4px;" id="wx-location">📍 --</div>
+          <div class="weather-main-temp" id="wx-temp">--°</div>
+          <div class="weather-desc" id="wx-desc">Loading…</div>
+        </div>
+        <div style="font-size:56px;" id="wx-icon">⛅</div>
+      </div>
+      <div class="weather-stats">
+        <div class="weather-stat"><i class="fas fa-tint"></i><span id="wx-humidity">--%</span></div>
+        <div class="weather-stat"><i class="fas fa-wind"></i><span id="wx-wind">-- m/s</span></div>
+        <div class="weather-stat"><i class="fas fa-cloud-rain"></i><span id="wx-rain">--mm</span></div>
+        <div class="weather-stat"><i class="fas fa-eye"></i><span id="wx-vis">-- km</span></div>
+      </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="card calendar-wrap">
+      <div class="cal-nav">
+        <button class="btn btn-outline" style="padding:6px 12px;" onclick="calPrev()">‹</button>
+        <div class="cal-month" id="cal-month-label">April 2026</div>
+        <button class="btn btn-outline" style="padding:6px 12px;" onclick="calNext()">›</button>
+      </div>
+      <div class="cal-grid" id="cal-grid">
+        <!-- Day labels -->
+        <div class="cal-day-label">S</div><div class="cal-day-label">M</div>
+        <div class="cal-day-label">T</div><div class="cal-day-label">W</div>
+        <div class="cal-day-label">T</div><div class="cal-day-label">F</div>
+        <div class="cal-day-label">S</div>
+      </div>
+    </div>
+
+    <!-- Day detail (shown when a date is selected) -->
+    <div id="day-detail" class="hidden">
+      <div class="day-detail-title" id="day-detail-title">📅 Selected Day</div>
+
+      <!-- Hourly temperature scroll -->
+      <p class="text-sm text-muted" style="margin-bottom:8px;">
+        <span class="en">🌡️ Temperature through the day</span>
+        <span class="te">🌡️ రోజంతా ఉష్ణోగ్రత</span>
+      </p>
+      <div class="hourly-scroll" id="hourly-scroll">
+        <!-- filled by JS -->
+      </div>
+
+      <!-- Reminders -->
+      <div class="reminder-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <strong style="font-size:14px;">
+            <span class="en">🔔 Reminders</span><span class="te">🔔 రిమైండర్లు</span>
+          </strong>
+        </div>
+        <div id="reminders-list">
+          <!-- filled by JS -->
+        </div>
+        <div class="add-reminder-row">
+          <input type="text" id="reminder-input" placeholder="Add reminder…">
+          <input type="time" id="reminder-time" value="07:00">
+          <button class="btn btn-green" onclick="addReminder()" style="padding:8px 12px;font-size:13px;">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: AI CROP SCAN ══════════════════════════════════════ -->
+  <div id="screen-scan" class="screen">
+    <div class="section-title">
+      🔬 <span class="en">AI Crop Diagnosis</span><span class="te">AI పంట రోగనిర్ధారణ</span>
+    </div>
+
+    <div class="scan-card">
+      <div class="camera-area" onclick="triggerCamera()">
+        <i class="fas fa-camera"></i>
+        <p style="margin-top:12px;font-weight:700;color:var(--green);">
+          <span class="en">Tap to capture crop photo</span>
+          <span class="te">పంట ఫోటో తీయడానికి నొక్కండి</span>
+        </p>
+        <p class="text-sm text-muted" style="margin-top:4px;">
+          <span class="en">Identify diseases, pests, or nutrient deficiencies</span>
+          <span class="te">వ్యాధులు, పురుగులు లేదా పోషక లోపాలను గుర్తించండి</span>
+        </p>
+      </div>
+      <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleImageCapture(event)">
+      <img id="preview-img" alt="Crop preview">
+    </div>
+
+    <!-- Voice input -->
+    <div class="scan-card" style="display:flex;align-items:center;gap:14px;">
+      <button class="voice-btn" id="voice-btn" onclick="toggleVoice()">
+        <i class="fas fa-microphone" id="voice-icon"></i>
+      </button>
+      <div>
+        <strong><span class="en">Voice Input</span><span class="te">వాయిస్ ఇన్‌పుట్</span></strong>
+        <p class="text-sm text-muted" id="voice-status">
+          <span class="en">Describe your crop issue in your language</span>
+          <span class="te">మీ భాషలో పంట సమస్యను వివరించండి</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Describe issue manually -->
+    <div class="scan-card">
+      <p style="font-weight:700;margin-bottom:8px;">
+        <span class="en">Or describe the issue:</span>
+        <span class="te">లేదా సమస్యను వివరించండి:</span>
+      </p>
+      <textarea id="issue-text" style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px;font-size:14px;height:80px;resize:none;outline:none;" placeholder="e.g. Yellow leaves, brown spots on paddy…"></textarea>
+      <button class="btn btn-green w-full mt-2" onclick="askGroq()">
+        <i class="fas fa-robot"></i>
+        <span class="en"> Get AI Diagnosis</span><span class="te"> AI రోగనిర్ధారణ పొందండి</span>
+      </button>
+    </div>
+
+    <!-- Groq result -->
+    <div id="groq-loader" class="groq-loader hidden">
+      <i class="fas fa-robot" style="color:var(--green);font-size:20px;"></i>
+      <span><span class="en">Analyzing with Groq AI</span><span class="te">Groq AI తో విశ్లేషిస్తున్నారు</span></span>
+      <div class="dots"><span></span><span></span><span></span></div>
+    </div>
+    <div class="ai-result hidden" id="ai-result">
+      <div class="ai-result-title">
+        🤖 <span class="en">AI Recommendation</span><span class="te">AI సిఫార్సు</span>
+      </div>
+      <div class="ai-result-text" id="ai-result-text"></div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: FARM FIELDS ══════════════════════════════════════ -->
+  <div id="screen-farms" class="screen">
+    <div class="section-title">
+      🌾 <span class="en">My Farm Fields</span><span class="te">నా పొలాలు</span>
+    </div>
+    <p class="text-sm text-muted" style="margin-bottom:14px;">
+      <span class="en">Manage up to 2 farm locations free</span>
+      <span class="te">2 పొలం స్థలాలు ఉచితంగా నిర్వహించండి</span>
+    </p>
+
+    <div id="fields-list">
+      <!-- rendered by JS -->
+    </div>
+
+    <button class="add-field-btn" id="add-field-btn" onclick="openFieldModal()">
+      <i class="fas fa-plus-circle"></i>
+      <span class="en">Add New Field</span><span class="te">కొత్త పొలం జోడించండి</span>
+    </button>
+
+    <!-- Soil health section -->
+    <div class="card mt-3">
+      <div class="section-title"><span class="en">Soil Health Tracker</span><span class="te">నేల ఆరోగ్య ట్రాకర్</span></div>
+      <div class="soil-meter">
+        <div class="soil-meter-label"><span>N – Nitrogen</span><span id="soil-n-val">65%</span></div>
+        <div class="meter-bar"><div class="meter-fill fill-green" id="soil-n-bar" style="width:65%"></div></div>
+      </div>
+      <div class="soil-meter">
+        <div class="soil-meter-label"><span>P – Phosphorus</span><span id="soil-p-val">48%</span></div>
+        <div class="meter-bar"><div class="meter-fill fill-amber" id="soil-p-bar" style="width:48%"></div></div>
+      </div>
+      <div class="soil-meter">
+        <div class="soil-meter-label"><span>K – Potassium</span><span id="soil-k-val">72%</span></div>
+        <div class="meter-bar"><div class="meter-fill fill-sky" id="soil-k-bar" style="width:72%"></div></div>
+      </div>
+      <div class="soil-meter">
+        <div class="soil-meter-label"><span>Moisture</span><span id="soil-m-val">55%</span></div>
+        <div class="meter-bar"><div class="meter-fill fill-earth" id="soil-m-bar" style="width:55%"></div></div>
+      </div>
+      <button class="btn btn-green w-full mt-2" onclick="getFertilizerRec()">
+        🧪 <span class="en">Get Fertilizer Recommendation</span><span class="te">ఎరువు సిఫారసు పొందండి</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: COMMUNITY ══════════════════════════════════════════ -->
+  <div id="screen-community" class="screen">
+    <div class="section-title">
+      💬 <span class="en">Community</span><span class="te">సమూహం</span>
+    </div>
+
+    <!-- New post -->
+    <div class="new-post-area">
+      <textarea id="post-text" placeholder="Share a tip, question, or update…"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-green" onclick="submitPost()" style="padding:8px 16px;font-size:13px;">
+          <i class="fas fa-paper-plane"></i>
+          <span class="en"> Post</span><span class="te"> పోస్ట్</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Posts list -->
+    <div id="posts-list">
+      <!-- rendered by JS -->
+    </div>
+
+    <!-- Submit fertilizer product (pending admin approval) -->
+    <div class="card mt-3">
+      <div class="section-title"><span class="en">Submit a Product/Fertilizer</span><span class="te">ఉత్పత్తి/ఎరువు సమర్పించండి</span></div>
+      <p class="text-sm text-muted" style="margin-bottom:10px;">
+        <span class="en">Products are published only after admin approval</span>
+        <span class="te">ఉత్పత్తులు అడ్మిన్ ఆమోదం తర్వాతే ప్రచురితమవుతాయి</span>
+      </p>
+      <input type="text" id="product-name" placeholder="Product name" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;margin-bottom:8px;">
+      <textarea id="product-desc" placeholder="Description, usage, price…" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;height:70px;resize:none;"></textarea>
+      <button class="btn btn-amber w-full mt-2" onclick="submitProduct()">
+        <span class="en">Submit for Approval</span><span class="te">ఆమోదం కోసం సమర్పించండి</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: MARKET PRICES ════════════════════════════════════ -->
+  <div id="screen-market" class="screen">
+    <div class="section-title">
+      💹 <span class="en">Market Prices</span><span class="te">మార్కెట్ ధరలు</span>
+    </div>
+    <div class="card">
+      <table class="market-table" style="border-radius:10px;overflow:hidden;">
+        <thead>
+          <tr>
+            <th><span class="en">Crop</span><span class="te">పంట</span></th>
+            <th><span class="en">Price/Quintal</span><span class="te">క్వింటాల్/ధర</span></th>
+            <th><span class="en">Change</span><span class="te">మార్పు</span></th>
+          </tr>
+        </thead>
+        <tbody id="market-tbody">
+          <tr><td>🌾 Paddy</td><td>₹2,100</td><td class="price-up">▲ ₹50</td></tr>
+          <tr><td>🌿 Cotton</td><td>₹7,200</td><td class="price-down">▼ ₹120</td></tr>
+          <tr><td>🌽 Maize</td><td>₹1,950</td><td class="price-up">▲ ₹30</td></tr>
+          <tr><td>🫘 Soybean</td><td>₹4,600</td><td class="price-down">▼ ₹80</td></tr>
+          <tr><td>🌶️ Chilli</td><td>₹8,900</td><td class="price-up">▲ ₹200</td></tr>
+          <tr><td>🧅 Onion</td><td>₹1,200</td><td class="price-up">▲ ₹15</td></tr>
+          <tr><td>🥜 Groundnut</td><td>₹5,400</td><td class="price-down">▼ ₹60</td></tr>
+          <tr><td>🌻 Sunflower</td><td>₹5,800</td><td class="price-up">▲ ₹40</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: PROFILE ════════════════════════════════════════════ -->
+  <div id="screen-profile" class="screen">
+    <div class="profile-hero">
+      <div class="profile-avatar-lg" id="prof-avatar">F</div>
+      <div class="profile-name" id="prof-name">Farmer</div>
+      <div class="profile-meta" id="prof-email">–</div>
+      <div class="trust-score">
+        <span class="stars">★★★★☆</span> 4.2 / 5 &nbsp;
+        <span class="badge badge-green" style="font-size:10px;">✓ <span class="en">Verified</span><span class="te">ధృవీకరించబడింది</span></span>
+      </div>
+    </div>
+
+    <div class="settings-list">
+      <!-- Language -->
+      <div class="settings-item">
+        <div class="settings-item-left">
+          <div class="settings-icon si-sky"><i class="fas fa-globe"></i></div>
+          <div>
+            <div class="settings-item-label"><span class="en">Language</span><span class="te">భాష</span></div>
+            <div class="settings-item-sub" id="lang-label-prof">English</div>
+          </div>
+        </div>
+        <button class="btn btn-outline" style="padding:6px 12px;font-size:12px;" onclick="toggleLang()">Switch</button>
+      </div>
+      <!-- Notifications -->
+      <div class="settings-item">
+        <div class="settings-item-left">
+          <div class="settings-icon si-amber"><i class="fas fa-bell"></i></div>
+          <div>
+            <div class="settings-item-label"><span class="en">Notifications</span><span class="te">నోటిఫికేషన్లు</span></div>
+            <div class="settings-item-sub"><span class="en">Pest alerts, weather, market</span></div>
+          </div>
+        </div>
+        <div class="toggle-switch on" id="toggle-notif" onclick="this.classList.toggle('on')">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>
+      <!-- Offline mode -->
+      <div class="settings-item">
+        <div class="settings-item-left">
+          <div class="settings-icon si-green"><i class="fas fa-wifi"></i></div>
+          <div>
+            <div class="settings-item-label"><span class="en">Offline Mode</span><span class="te">ఆఫ్‌లైన్ మోడ్</span></div>
+            <div class="settings-item-sub"><span class="en">Cache data for offline use</span></div>
+          </div>
+        </div>
+        <div class="toggle-switch on" id="toggle-offline" onclick="this.classList.toggle('on')">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>
+      <!-- Expert consultation -->
+      <div class="settings-item" onclick="showToast('Expert consultation coming soon!')">
+        <div class="settings-item-left">
+          <div class="settings-icon si-sky"><i class="fas fa-user-md"></i></div>
+          <div>
+            <div class="settings-item-label"><span class="en">Expert Consultation</span><span class="te">నిపుణుల సంప్రదింపు</span></div>
+            <div class="settings-item-sub"><span class="en">Chat with agri experts</span></div>
+          </div>
+        </div>
+        <i class="fas fa-chevron-right text-muted"></i>
+      </div>
+      <!-- Educational videos -->
+      <div class="settings-item" onclick="showToast('Educational videos coming soon!')">
+        <div class="settings-item-left">
+          <div class="settings-icon si-amber"><i class="fas fa-play-circle"></i></div>
+          <div>
+            <div class="settings-item-label"><span class="en">Educational Videos</span><span class="te">విద్యా వీడియోలు</span></div>
+            <div class="settings-item-sub"><span class="en">Learn farming techniques</span></div>
+          </div>
+        </div>
+        <i class="fas fa-chevron-right text-muted"></i>
+      </div>
+      <!-- Logout -->
+      <div class="settings-item" onclick="doLogout()">
+        <div class="settings-item-left">
+          <div class="settings-icon si-red"><i class="fas fa-sign-out-alt"></i></div>
+          <div>
+            <div class="settings-item-label" style="color:var(--red);"><span class="en">Logout</span><span class="te">లాగ్అవుట్</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN: ADMIN PANEL ══════════════════════════════════════ -->
+  <div id="screen-admin" class="screen">
+    <div class="admin-header">
+      <i class="fas fa-shield-alt"></i>
+      <div>
+        <h2><span class="en">Admin Control Panel</span><span class="te">అడ్మిన్ కంట్రోల్ పానెల్</span></h2>
+        <p><span class="en">Manage alerts, products & community</span><span class="te">హెచ్చరికలు, ఉత్పత్తులు & సమూహాన్ని నిర్వహించండి</span></p>
+      </div>
+    </div>
+
+    <!-- Send Global Alert -->
+    <div class="admin-section">
+      <div class="admin-section-title"><i class="fas fa-broadcast-tower"></i> <span class="en">Send Global Alert</span><span class="te">గ్లోబల్ హెచ్చరిక పంపండి</span></div>
+      <div class="admin-alert-compose">
+        <div class="alert-type-row" id="alert-type-row">
+          <button class="alert-type-btn active" onclick="setAlertType(this,'pest')">🐛 Pest</button>
+          <button class="alert-type-btn" onclick="setAlertType(this,'weather')">🌧️ Weather</button>
+          <button class="alert-type-btn" onclick="setAlertType(this,'fertilizer')">🧪 Fertilizer</button>
+          <button class="alert-type-btn" onclick="setAlertType(this,'disease')">🦠 Disease</button>
+          <button class="alert-type-btn" onclick="setAlertType(this,'market')">💹 Market</button>
+        </div>
+        <textarea id="alert-message" placeholder="Type alert message…" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:14px;height:80px;resize:none;margin-bottom:10px;"></textarea>
+        <button class="btn btn-red w-full" onclick="sendGlobalAlert()">
+          <i class="fas fa-broadcast-tower"></i>
+          <span class="en"> Send to All Farmers</span><span class="te"> అందరు రైతులకు పంపండి</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Pending products -->
+    <div class="admin-section">
+      <div class="admin-section-title"><i class="fas fa-box"></i> <span class="en">Pending Product Approvals</span><span class="te">పెండింగ్ ఉత్పత్తి ఆమోదాలు</span></div>
+      <div id="pending-products-list">
+        <p class="text-sm text-muted"><span class="en">No pending products</span><span class="te">పెండింగ్ ఉత్పత్తులు లేవు</span></p>
+      </div>
+    </div>
+
+    <!-- Community moderation -->
+    <div class="admin-section">
+      <div class="admin-section-title"><i class="fas fa-users-cog"></i> <span class="en">Community Moderation</span><span class="te">సమూహ నిర్వహణ</span></div>
+      <div id="admin-posts-list">
+        <!-- posts with delete option -->
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="bottomnav">
+    <button class="nav-item active" onclick="showScreen('home')" id="nav-home">
+      <i class="fas fa-home"></i>
+      <span class="en">Home</span><span class="te">హోమ్</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('weather')" id="nav-weather">
+      <i class="fas fa-cloud-sun"></i>
+      <span class="en">Weather</span><span class="te">వాతావరణం</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('scan')" id="nav-scan">
+      <i class="fas fa-camera"></i>
+      <span class="en">Scan</span><span class="te">స్కాన్</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('community')" id="nav-community">
+      <i class="fas fa-users"></i>
+      <span class="en">Community</span><span class="te">సమూహం</span>
+    </button>
+    <button class="nav-item" onclick="showScreen('profile')" id="nav-profile">
+      <i class="fas fa-user"></i>
+      <span class="en">Profile</span><span class="te">ప్రొఫైల్</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══ FIELD MODAL ════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="field-modal" onclick="closeFieldModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      🌾 <span class="en">Add Farm Field</span><span class="te">పొలం జోడించండి</span>
+    </div>
+    <div class="form-group">
+      <label><span class="en">Field Name</span><span class="te">పొలం పేరు</span></label>
+      <input type="text" id="f-name" placeholder="e.g. North Field">
+    </div>
+    <div class="form-group">
+      <label><span class="en">Area (Acres)</span><span class="te">విస్తీర్ణం (ఎకరాలు)</span></label>
+      <input type="number" id="f-area" placeholder="2.5">
+    </div>
+    <div class="form-group">
+      <label><span class="en">Soil Type</span><span class="te">నేల రకం</span></label>
+      <select id="f-soil">
+        <option>Black Cotton Soil</option>
+        <option>Red Loamy Soil</option>
+        <option>Alluvial Soil</option>
+        <option>Sandy Soil</option>
+        <option>Laterite Soil</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label><span class="en">Water Source</span><span class="te">నీటి వనరు</span></label>
+      <select id="f-water">
+        <option>Borewell</option>
+        <option>Canal Irrigation</option>
+        <option>Rain-fed</option>
+        <option>Drip Irrigation</option>
+        <option>Pond</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label><span class="en">Current Crop</span><span class="te">ప్రస్తుత పంట</span></label>
+      <select id="f-crop">
+        <option>Paddy</option><option>Cotton</option><option>Maize</option>
+        <option>Soybean</option><option>Chilli</option><option>Groundnut</option>
+        <option>Sunflower</option><option>Sugarcane</option><option>Wheat</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label><span class="en">Crop Stage</span><span class="te">పంట దశ</span></label>
+      <select id="f-stage">
+        <option>Sowing</option><option>Germination</option><option>Vegetative</option>
+        <option>Flowering</option><option>Grain Filling</option><option>Maturity</option>
+      </select>
+    </div>
+    <button class="btn btn-green w-full" onclick="saveField()">
+      <span class="en">Save Field</span><span class="te">పొలం సేవ్ చేయండి</span>
+    </button>
+  </div>
+</div>
+
+<!-- CROP ROTATION MODAL -->
+<div class="modal-overlay hidden" id="rotation-modal" onclick="closeRotationModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔄 <span class="en">Crop Rotation Suggestions</span><span class="te">పంట మార్పిడి సూచనలు</span></div>
+    <div id="rotation-result">
+      <div class="groq-loader">
+        <i class="fas fa-robot" style="color:var(--green);font-size:20px;"></i>
+        <span><span class="en">Getting AI suggestions…</span><span class="te">AI సూచనలు తీసుకుంటున్నారు…</span></span>
+        <div class="dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────── STATE ─────────────────────────────── */
+let appState = {
+  currentUser:  null,
+  isAdmin:      false,
+  lang:         'en',
+  fields:       JSON.parse(localStorage.getItem('km_fields') || '[]'),
+  reminders:    JSON.parse(localStorage.getItem('km_reminders') || '{}'),
+  selectedDate: null,
+  calYear:      2026,
+  calMonth:     3,   // 0-indexed → April
+  weather:      null,
+  alertType:    'pest',
+  role:         'farmer',
+  authMode:     'login',
+  posts:        [],
+  pendingProducts: [],
+};
+
+/* Admin emails – add authorised admin emails here */
+const ADMIN_EMAILS = ['admin@krishimitra.com', 'superadmin@krishimitra.com'];
+
+/* ─────────────────────────── AUTH ──────────────────────────────── */
+function switchRole(r) {
+  appState.role = r;
+  document.getElementById('tab-farmer').classList.toggle('active', r === 'farmer');
+  document.getElementById('tab-admin').classList.toggle('active', r === 'admin');
+  document.getElementById('admin-notice').classList.toggle('hidden', r !== 'admin');
+  document.getElementById('tab-register').classList.toggle('hidden', r === 'admin');
+  if (r === 'admin') switchAuthMode('login');
+}
+
+function switchAuthMode(m) {
+  appState.authMode = m;
+  document.getElementById('tab-login').classList.toggle('active', m === 'login');
+  document.getElementById('tab-register').classList.toggle('active', m === 'register');
+  document.getElementById('name-group').classList.toggle('hidden', m !== 'register');
+  const btn = document.getElementById('auth-submit-btn');
+  btn.innerHTML = m === 'login'
+    ? '<span class="en">Login</span><span class="te">లాగిన్</span>'
+    : '<span class="en">Create Account</span><span class="te">ఖాతా తయారు చేయండి</span>';
+}
+
+async function handleAuth() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const msg      = document.getElementById('auth-msg');
+  msg.textContent = '';
+
+  if (!email || !password) { msg.textContent = 'Please enter email and password.'; return; }
+
+  // Admin role: must be in allowed list
+  if (appState.role === 'admin' && !ADMIN_EMAILS.includes(email)) {
+    msg.textContent = 'You are not authorised as admin.';
+    return;
+  }
+
+  try {
+    let cred;
+    if (appState.authMode === 'login') {
+      cred = await window.FB.signInWithEmailAndPassword(window.FB.auth, email, password);
+    } else {
+      cred = await window.FB.createUserWithEmailAndPassword(window.FB.auth, email, password);
+      // Save profile
+      await window.FB.setDoc(window.FB.doc(window.FB.db, 'users', cred.user.uid), {
+        name:  document.getElementById('auth-name').value.trim() || 'Farmer',
+        email: email,
+        role:  appState.role,
+        createdAt: window.FB.serverTimestamp(),
+      });
+    }
+    // Auth state change handled by onAuthStateChanged below
+  } catch (e) {
+    msg.textContent = e.message.replace('Firebase: ', '').replace(/\(auth.*\)/, '');
+  }
+}
+
+// Detect if Firebase loaded
+document.addEventListener('DOMContentLoaded', () => {
+  const waitFB = setInterval(() => {
+    if (window.FB) {
+      clearInterval(waitFB);
+      window.FB.onAuthStateChanged(window.FB.auth, async (user) => {
+        if (user) {
+          appState.currentUser = user;
+          // Check if admin
+          const snap = await window.FB.getDoc(window.FB.doc(window.FB.db, 'users', user.uid)).catch(() => null);
+          const data = snap && snap.exists() ? snap.data() : {};
+          appState.isAdmin = (data.role === 'admin') || ADMIN_EMAILS.includes(user.email);
+          onUserLoggedIn(user, data);
+        } else {
+          showAuthScreen();
+        }
+      });
+    }
+  }, 200);
+
+  // Offline detection
+  window.addEventListener('offline', () => document.getElementById('offline-banner').style.display = 'block');
+  window.addEventListener('online',  () => document.getElementById('offline-banner').style.display = 'none');
+});
+
+function onUserLoggedIn(user, data) {
+  document.getElementById('auth-wrap').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+
+  const name = data.name || user.email.split('@')[0];
+  document.getElementById('home-avatar').textContent  = name[0].toUpperCase();
+  document.getElementById('prof-avatar').textContent  = name[0].toUpperCase();
+  document.getElementById('prof-name').textContent   = name;
+  document.getElementById('prof-email').textContent  = user.email;
+
+  greetUser(name);
+
+  // Show admin nav if admin
+  if (appState.isAdmin) addAdminNav();
+
+  // Load data
+  loadWeather();
+  renderFields();
+  loadPosts();
+  loadAdminAlerts();
+  renderCalendar();
+  loadDailyAdvisory();
+}
+
+function showAuthScreen() {
+  document.getElementById('auth-wrap').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+async function doLogout() {
+  await window.FB.signOut(window.FB.auth);
+  showAuthScreen();
+}
+
+function addAdminNav() {
+  if (document.getElementById('nav-admin')) return;
+  const nav = document.getElementById('bottomnav');
+  const btn = document.createElement('button');
+  btn.className = 'nav-item';
+  btn.id = 'nav-admin';
+  btn.innerHTML = `<i class="fas fa-shield-alt"></i><span class="en">Admin</span><span class="te">అడ్మిన్</span>`;
+  btn.onclick = () => showScreen('admin');
+  nav.appendChild(btn);
+  loadPendingProducts();
+  loadAdminPosts();
+}
+
+/* ─────────────────────────── NAV ────────────────────────────────── */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const s = document.getElementById('screen-' + name);
+  if (s) s.classList.add('active');
+  const nb = document.getElementById('nav-' + name);
+  if (nb) nb.classList.add('active');
+}
+
+/* ─────────────────────────── LANGUAGE ──────────────────────────── */
+function toggleLang() {
+  appState.lang = appState.lang === 'en' ? 'te' : 'en';
+  document.body.classList.toggle('lang-en', appState.lang === 'en');
+  document.body.classList.toggle('lang-te', appState.lang === 'te');
+  document.getElementById('lang-label-prof').textContent = appState.lang === 'en' ? 'English' : 'తెలుగు';
+}
+document.body.classList.add('lang-en');
+
+/* ─────────────────────────── GREETING ──────────────────────────── */
+function greetUser(name) {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greeting-name').textContent = `${g}, ${name}! ${h < 12 ? '🌞' : h < 17 ? '🌤️' : '🌙'}`;
+  document.getElementById('greeting-date').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+/* ─────────────────────────── WEATHER ────────────────────────────── */
+async function loadWeather() {
+  try {
+    // Try geolocation first
+    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }));
+    const { latitude: lat, longitude: lon } = pos.coords;
+    await fetchWeather(lat, lon);
+  } catch {
+    // Fallback: Suriapet, Telangana
+    await fetchWeather(17.1416, 79.6199);
+  }
+}
+
+async function fetchWeather(lat, lon) {
+  try {
+    const key = API_KEYS.OPENWEATHER_API_KEY;
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${key}&units=metric`;
+    const res = await fetch(url);
+    const d   = await res.json();
+
+    if (d.cod !== 200) throw new Error('Weather API error');
+
+    appState.weather = d;
+    const temp = Math.round(d.main.temp);
+    const desc = d.weather[0].description;
+
+    document.getElementById('home-temp').textContent   = `${temp}°C`;
+    document.getElementById('home-weather-desc').textContent = desc;
+    document.getElementById('wx-temp').textContent     = `${temp}°`;
+    document.getElementById('wx-desc').textContent     = desc;
+    document.getElementById('wx-location').textContent = `📍 ${d.name}`;
+    document.getElementById('wx-humidity').textContent = `${d.main.humidity}%`;
+    document.getElementById('wx-wind').textContent     = `${d.wind.speed} m/s`;
+    document.getElementById('wx-rain').textContent     = d.rain ? `${d.rain['1h'] || 0}mm` : '0mm';
+    document.getElementById('wx-vis').textContent      = `${Math.round((d.visibility || 0) / 1000)} km`;
+    document.getElementById('wx-icon').textContent     = weatherEmoji(d.weather[0].icon);
+
+    // Cache for offline
+    localStorage.setItem('km_weather', JSON.stringify({ temp, desc, name: d.name, humidity: d.main.humidity, wind: d.wind.speed }));
+  } catch {
+    const cached = JSON.parse(localStorage.getItem('km_weather') || 'null');
+    if (cached) {
+      document.getElementById('home-temp').textContent = `${cached.temp}°C`;
+      document.getElementById('home-weather-desc').textContent = cached.desc + ' (cached)';
+    }
+  }
+}
+
+function weatherEmoji(icon) {
+  const map = { '01d':'☀️','01n':'🌙','02d':'⛅','02n':'☁️','03d':'☁️','03n':'☁️','04d':'☁️','04n':'☁️','09d':'🌧️','09n':'🌧️','10d':'🌦️','10n':'🌧️','11d':'⛈️','11n':'⛈️','13d':'❄️','13n':'❄️','50d':'🌫️','50n':'🌫️' };
+  return map[icon] || '⛅';
+}
+
+/* ─────────────────────────── CALENDAR ───────────────────────────── */
+function renderCalendar() {
+  const { calYear: y, calMonth: m } = appState;
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent = `${months[m]} ${y}`;
+
+  const grid = document.getElementById('cal-grid');
+  // Remove old day cells (keep the 7 day-label headers)
+  while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const today = new Date();
+
+  // Empty cells
+  for (let i = 0; i < firstDay; i++) {
+    const emp = document.createElement('div');
+    emp.className = 'cal-day empty';
+    grid.appendChild(emp);
+  }
+
+  // Day cells
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-day';
+
+    const isToday = (d === today.getDate() && m === today.getMonth() && y === today.getFullYear());
+    if (isToday) cell.classList.add('today');
+
+    const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if (appState.selectedDate === dateKey) cell.classList.add('selected');
+
+    // Simulated min temp (real: use forecast API)
+    const minTemp = 22 + Math.floor(Math.sin(d * 0.6) * 5);
+    const rainProb = Math.round((Math.sin(d * 0.4 + 1) + 1) / 2 * 70);
+
+    const dayNum = document.createElement('div');
+    dayNum.textContent = d;
+    cell.appendChild(dayNum);
+
+    const miniTemp = document.createElement('div');
+    miniTemp.className = 'cal-mini-temp';
+    miniTemp.textContent = `${minTemp}°`;
+    cell.appendChild(miniTemp);
+
+    const dots = document.createElement('div');
+    dots.style.cssText = 'display:flex;gap:2px;';
+    const rainDot = document.createElement('div');
+    rainDot.className = 'cal-rain-dot' + (rainProb > 40 ? ' active' : '');
+    rainDot.title = `Rain: ${rainProb}%`;
+    dots.appendChild(rainDot);
+
+    const remKey = dateKey;
+    if (appState.reminders[remKey] && appState.reminders[remKey].length) {
+      const remDot = document.createElement('div');
+      remDot.className = 'cal-reminder-dot';
+      dots.appendChild(remDot);
+    }
+    cell.appendChild(dots);
+
+    cell.onclick = () => selectDate(dateKey, d, m, y);
+    grid.appendChild(cell);
+  }
+}
+
+function calPrev() { if (appState.calMonth === 0) { appState.calMonth = 11; appState.calYear--; } else appState.calMonth--; renderCalendar(); }
+function calNext() { if (appState.calMonth === 11) { appState.calMonth = 0; appState.calYear++; } else appState.calMonth++; renderCalendar(); }
+
+function selectDate(dateKey, d, m, y) {
+  appState.selectedDate = dateKey;
+  renderCalendar();
+
+  const panel = document.getElementById('day-detail');
+  panel.classList.remove('hidden');
+
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('day-detail-title').textContent = `📅 ${d} ${months[m]} ${y}`;
+
+  renderHourly(d, m, y);
+  renderReminders(dateKey);
+
+  // Scroll to day detail
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+/* ─────────────────────────── HOURLY TEMP ────────────────────────── */
+async function renderHourly(d, m, y) {
+  const scroll = document.getElementById('hourly-scroll');
+  scroll.innerHTML = '';
+
+  // Try to fetch real 5-day forecast from OpenWeather
+  try {
+    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 })).catch(() => null);
+    const lat = pos ? pos.coords.latitude  : 17.1416;
+    const lon = pos ? pos.coords.longitude : 79.6199;
+    const key = API_KEYS.OPENWEATHER_API_KEY;
+    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${key}&units=metric`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const targetDate = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const slots = (data.list || []).filter(item => item.dt_txt.startsWith(targetDate));
+
+    if (slots.length > 0) {
+      slots.forEach(slot => {
+        const time = slot.dt_txt.split(' ')[1].slice(0, 5);
+        const temp = Math.round(slot.main.temp);
+        const rain = slot.rain ? (slot.rain['3h'] || 0) : 0;
+        const icon = weatherEmoji(slot.weather[0].icon);
+        scroll.appendChild(makeHourlyCard(time, temp, rain, icon));
+      });
+      return;
+    }
+  } catch {}
+
+  // Fallback: simulated data
+  const hours = [0,3,6,9,12,15,18,21];
+  const baseTemp = 24 + Math.floor(Math.sin(d * 0.5) * 4);
+  const tempCurve = [-4,-3,-2, 2, 6, 5, 2,-1];
+  const icons = ['🌙','🌙','🌅','⛅','☀️','🌤️','🌆','🌙'];
+  hours.forEach((h, i) => {
+    const t = String(h).padStart(2,'0') + ':00';
+    const temp = baseTemp + tempCurve[i];
+    const rain = (h >= 15 && h <= 18) ? (Math.random() * 3).toFixed(1) : 0;
+    scroll.appendChild(makeHourlyCard(t, temp, rain, icons[i]));
+  });
+}
+
+function makeHourlyCard(time, temp, rain, icon) {
+  const card = document.createElement('div');
+  card.className = 'hourly-card';
+  card.innerHTML = `
+    <div class="hourly-time">${time}</div>
+    <div class="hourly-icon">${icon}</div>
+    <div class="hourly-temp">${temp}°C</div>
+    <div class="hourly-rain">${rain > 0 ? '💧' + rain + 'mm' : '–'}</div>
+  `;
+  return card;
+}
+
+/* ─────────────────────────── REMINDERS ──────────────────────────── */
+function renderReminders(dateKey) {
+  const list = document.getElementById('reminders-list');
+  list.innerHTML = '';
+  const items = appState.reminders[dateKey] || [];
+  if (!items.length) {
+    list.innerHTML = `<p class="text-sm text-muted"><span class="en">No reminders for this day</span><span class="te">ఈ రోజు రిమైండర్లు లేవు</span></p>`;
+    return;
+  }
+  items.forEach((rem, i) => {
+    const el = document.createElement('div');
+    el.className = 'reminder-item';
+    el.innerHTML = `
+      <div class="reminder-dot"></div>
+      <div class="reminder-text">${rem.text}</div>
+      <div class="reminder-time">${rem.time}</div>
+      <button class="reminder-del" onclick="deleteReminder('${dateKey}',${i})"><i class="fas fa-times"></i></button>
+    `;
+    list.appendChild(el);
+  });
+}
+
+function addReminder() {
+  const dateKey = appState.selectedDate;
+  if (!dateKey) return showToast('Please select a date first');
+  const text = document.getElementById('reminder-input').value.trim();
+  const time = document.getElementById('reminder-time').value;
+  if (!text) return;
+  if (!appState.reminders[dateKey]) appState.reminders[dateKey] = [];
+  appState.reminders[dateKey].push({ text, time });
+  localStorage.setItem('km_reminders', JSON.stringify(appState.reminders));
+  document.getElementById('reminder-input').value = '';
+  renderReminders(dateKey);
+  renderCalendar();
+  showToast('Reminder added!');
+}
+
+function deleteReminder(dateKey, idx) {
+  appState.reminders[dateKey].splice(idx, 1);
+  localStorage.setItem('km_reminders', JSON.stringify(appState.reminders));
+  renderReminders(dateKey);
+  renderCalendar();
+}
+
+/* ─────────────────────────── AI (GROQ) ──────────────────────────── */
+async function askGroq(prompt = null) {
+  const userPrompt = prompt || document.getElementById('issue-text').value.trim();
+  if (!userPrompt) return showToast('Please describe the crop issue or capture a photo');
+
+  document.getElementById('groq-loader').classList.remove('hidden');
+  document.getElementById('ai-result').classList.add('hidden');
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEYS.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama3-70b-8192',
+        messages: [
+          { role: 'system', content: 'You are an expert agricultural advisor. Give precise, practical recommendations for crop diseases, pests, and nutrient deficiencies. Include fertilizer names, dosage, and treatment steps. Be concise and farmer-friendly.' },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
+    });
+    const data = await res.json();
+    const answer = data.choices?.[0]?.message?.content || 'Unable to get response. Check your Groq API key.';
+    document.getElementById('ai-result-text').textContent = answer;
+    document.getElementById('ai-result').classList.remove('hidden');
+  } catch (e) {
+    document.getElementById('ai-result-text').textContent = 'Error: ' + e.message;
+    document.getElementById('ai-result').classList.remove('hidden');
+  } finally {
+    document.getElementById('groq-loader').classList.add('hidden');
+  }
+}
+
+async function getFertilizerRec() {
+  const field = appState.fields[0];
+  const prompt = field
+    ? `Farm field: ${field.name}, soil: ${field.soil}, crop: ${field.crop} at ${field.stage} stage. N:65%, P:48%, K:72%, Moisture:55%. Give specific fertilizer recommendations with dosage and schedule.`
+    : 'Paddy crop, black cotton soil, vegetative stage. N:65%, P:48%, K:72%. Give fertilizer recommendations.';
+  showScreen('scan');
+  document.getElementById('issue-text').value = prompt;
+  await askGroq(prompt);
+}
+
+/* ─────────────────────────── CAMERA / VOICE ─────────────────────── */
+function triggerCamera() { document.getElementById('camera-input').click(); }
+
+function handleImageCapture(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('preview-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('issue-text').value = 'Analyze this crop image and identify any diseases, pests, or nutritional deficiencies. Provide treatment recommendations.';
+    showToast('Photo captured! Tap "Get AI Diagnosis"');
+  };
+  reader.readAsDataURL(file);
+}
+
+let recognition = null;
+function toggleVoice() {
+  const btn  = document.getElementById('voice-btn');
+  const icon = document.getElementById('voice-icon');
+  const stat = document.getElementById('voice-status');
+
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    showToast('Voice input not supported in this browser');
+    return;
+  }
+  if (recognition && btn.classList.contains('recording')) {
+    recognition.stop();
+    btn.classList.remove('recording');
+    icon.className = 'fas fa-microphone';
+    return;
+  }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = appState.lang === 'te' ? 'te-IN' : 'te-IN'; // Telugu preferred
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = e => {
+    const transcript = e.results[0][0].transcript;
+    document.getElementById('issue-text').value = transcript;
+    stat.children[0].textContent = transcript.slice(0, 60) + (transcript.length > 60 ? '…' : '');
+  };
+  recognition.onerror = () => showToast('Voice recognition error');
+  recognition.onend = () => {
+    btn.classList.remove('recording');
+    icon.className = 'fas fa-microphone';
+  };
+  recognition.start();
+  btn.classList.add('recording');
+  icon.className = 'fas fa-stop';
+}
+
+/* ─────────────────────────── FIELDS ─────────────────────────────── */
+function openFieldModal() {
+  if (appState.fields.length >= 2) {
+    showToast('Maximum 2 fields allowed in free plan');
+    return;
+  }
+  document.getElementById('field-modal').classList.remove('hidden');
+}
+function closeFieldModal(e) { if (e.target === document.getElementById('field-modal')) document.getElementById('field-modal').classList.add('hidden'); }
+
+function saveField() {
+  const field = {
+    id:    Date.now(),
+    name:  document.getElementById('f-name').value || 'My Field',
+    area:  document.getElementById('f-area').value || '1',
+    soil:  document.getElementById('f-soil').value,
+    water: document.getElementById('f-water').value,
+    crop:  document.getElementById('f-crop').value,
+    stage: document.getElementById('f-stage').value,
+  };
+  appState.fields.push(field);
+  localStorage.setItem('km_fields', JSON.stringify(appState.fields));
+  document.getElementById('field-modal').classList.add('hidden');
+  renderFields();
+  showToast('Field saved!');
+  // Update home block
+  document.getElementById('home-crop-name').textContent = field.crop;
+  // Also save to Firestore
+  if (appState.currentUser && window.FB) {
+    window.FB.addDoc(window.FB.collection(window.FB.db, 'users', appState.currentUser.uid, 'fields'), field).catch(() => {});
+  }
+}
+
+function renderFields() {
+  const list = document.getElementById('fields-list');
+  list.innerHTML = '';
+  if (!appState.fields.length) {
+    list.innerHTML = `<p class="text-sm text-muted" style="margin-bottom:14px;"><span class="en">No fields added yet</span><span class="te">ఇంకా పొలాలు జోడించలేదు</span></p>`;
+    return;
+  }
+  appState.fields.forEach((f, i) => {
+    const el = document.createElement('div');
+    el.className = 'field-card';
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div class="field-name">🌾 ${f.name}</div>
+          <div class="field-meta">${f.area} acres · ${f.soil}</div>
+        </div>
+        <button class="btn btn-red" style="padding:5px 10px;font-size:12px;" onclick="deleteField(${i})"><i class="fas fa-trash"></i></button>
+      </div>
+      <div class="field-tags" style="margin-top:10px;">
+        <span class="field-tag">💧 ${f.water}</span>
+        <span class="field-tag">🌿 ${f.crop}</span>
+        <span class="field-tag">📅 ${f.stage}</span>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+  document.getElementById('add-field-btn').textContent = appState.fields.length >= 2 ? '✓ 2/2 Fields (Max reached)' : '+ Add New Field';
+}
+
+function deleteField(idx) {
+  appState.fields.splice(idx, 1);
+  localStorage.setItem('km_fields', JSON.stringify(appState.fields));
+  renderFields();
+}
+
+/* ─────────────────────────── COMMUNITY / POSTS ──────────────────── */
+async function loadPosts() {
+  if (!window.FB || !appState.currentUser) return;
+  try {
+    const q = window.FB.query(
+      window.FB.collection(window.FB.db, 'posts'),
+      window.FB.orderBy('createdAt', 'desc')
+    );
+    window.FB.onSnapshot(q, snap => {
+      appState.posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderPosts();
+    });
+  } catch {}
+}
+
+function renderPosts() {
+  const list = document.getElementById('posts-list');
+  if (!list) return;
+  if (!appState.posts.length) {
+    list.innerHTML = `<p class="text-sm text-muted"><span class="en">No posts yet. Be the first!</span><span class="te">ఇంకా పోస్ట్‌లు లేవు. మొదటివారిగా ఉండండి!</span></p>`;
+    return;
+  }
+  list.innerHTML = appState.posts.map(p => `
+    <div class="post-card">
+      <div class="post-header">
+        <div class="post-avatar">${(p.author || 'F')[0].toUpperCase()}</div>
+        <div>
+          <div class="post-author">${p.author || 'Farmer'}</div>
+          <div class="post-time">${formatTime(p.createdAt)}</div>
+        </div>
+        ${p.pending ? '<span class="pending-badge">Pending</span>' : ''}
+      </div>
+      <div class="post-body">${p.body}</div>
+      <div class="post-actions">
+        <button class="post-action-btn"><i class="fas fa-thumbs-up"></i> ${p.likes || 0}</button>
+        <button class="post-action-btn"><i class="fas fa-comment"></i> Reply</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function submitPost() {
+  const body = document.getElementById('post-text').value.trim();
+  if (!body) return;
+  if (!window.FB || !appState.currentUser) return showToast('Not logged in');
+  try {
+    await window.FB.addDoc(window.FB.collection(window.FB.db, 'posts'), {
+      body,
+      author:    appState.currentUser.displayName || appState.currentUser.email.split('@')[0],
+      uid:       appState.currentUser.uid,
+      createdAt: window.FB.serverTimestamp(),
+      likes:     0,
+      pending:   false,
+    });
+    document.getElementById('post-text').value = '';
+    showToast('Post shared!');
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+
+async function submitProduct() {
+  const name = document.getElementById('product-name').value.trim();
+  const desc = document.getElementById('product-desc').value.trim();
+  if (!name) return showToast('Enter product name');
+  if (!window.FB || !appState.currentUser) return;
+  await window.FB.addDoc(window.FB.collection(window.FB.db, 'pendingProducts'), {
+    name, desc,
+    submittedBy: appState.currentUser.uid,
+    approved: false,
+    createdAt: window.FB.serverTimestamp(),
+  }).catch(() => {});
+  document.getElementById('product-name').value = '';
+  document.getElementById('product-desc').value = '';
+  showToast('Submitted! Awaiting admin approval.');
+}
+
+/* ─────────────────────────── ADMIN ─────────────────────────────── */
+let selectedAlertType = 'pest';
+function setAlertType(btn, type) {
+  selectedAlertType = type;
+  document.querySelectorAll('.alert-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function sendGlobalAlert() {
+  if (!appState.isAdmin) return showToast('Unauthorized');
+  const msg = document.getElementById('alert-message').value.trim();
+  if (!msg) return showToast('Enter alert message');
+  if (!window.FB) return;
+  await window.FB.addDoc(window.FB.collection(window.FB.db, 'globalAlerts'), {
+    type:    selectedAlertType,
+    message: msg,
+    sentBy:  appState.currentUser.uid,
+    createdAt: window.FB.serverTimestamp(),
+    active:  true,
+  }).catch(() => {});
+  document.getElementById('alert-message').value = '';
+  showToast('✅ Global alert sent to all farmers!');
+}
+
+async function loadAdminAlerts() {
+  if (!window.FB) return;
+  try {
+    const q = window.FB.query(
+      window.FB.collection(window.FB.db, 'globalAlerts'),
+      window.FB.orderBy('createdAt', 'desc')
+    );
+    window.FB.onSnapshot(q, snap => {
+      const alerts = snap.docs.map(d => d.data()).filter(a => a.active);
+      if (alerts.length) {
+        document.getElementById('admin-alert-strip').style.display = 'flex';
+        document.getElementById('admin-alert-text').textContent = alerts[0].message;
+        document.getElementById('notif-dot').classList.remove('hidden');
+      }
+    });
+  } catch {}
+}
+
+async function loadPendingProducts() {
+  if (!window.FB || !appState.isAdmin) return;
+  try {
+    const snap = await window.FB.getDocs(window.FB.collection(window.FB.db, 'pendingProducts'));
+    const list = document.getElementById('pending-products-list');
+    if (!list) return;
+    const pending = snap.docs.filter(d => !d.data().approved);
+    if (!pending.length) { list.innerHTML = '<p class="text-sm text-muted">No pending products</p>'; return; }
+    list.innerHTML = '';
+    pending.forEach(d => {
+      const data = d.data();
+      const el = document.createElement('div');
+      el.className = 'pending-product-card';
+      el.innerHTML = `
+        <strong>${data.name}</strong>
+        <p class="text-sm text-muted" style="margin-top:4px;">${data.desc || ''}</p>
+        <div class="pending-product-actions">
+          <button class="btn btn-green" style="padding:6px 12px;font-size:12px;" onclick="approveProduct('${d.id}',this.parentElement.parentElement)">✓ Approve</button>
+          <button class="btn btn-red" style="padding:6px 12px;font-size:12px;" onclick="rejectProduct('${d.id}',this.parentElement.parentElement)">✗ Reject</button>
+        </div>
+      `;
+      list.appendChild(el);
+    });
+  } catch {}
+}
+
+async function approveProduct(id, el) {
+  if (!window.FB) return;
+  await window.FB.updateDoc(window.FB.doc(window.FB.db, 'pendingProducts', id), { approved: true }).catch(() => {});
+  el.remove();
+  showToast('Product approved!');
+}
+
+async function rejectProduct(id, el) {
+  if (!window.FB) return;
+  await window.FB.deleteDoc(window.FB.doc(window.FB.db, 'pendingProducts', id)).catch(() => {});
+  el.remove();
+  showToast('Product rejected');
+}
+
+async function loadAdminPosts() {
+  if (!window.FB || !appState.isAdmin) return;
+  const list = document.getElementById('admin-posts-list');
+  if (!list) return;
+  const q = window.FB.query(window.FB.collection(window.FB.db, 'posts'), window.FB.orderBy('createdAt', 'desc'));
+  window.FB.onSnapshot(q, snap => {
+    list.innerHTML = '';
+    snap.docs.forEach(d => {
+      const data = d.data();
+      const el = document.createElement('div');
+      el.style.cssText = 'background:var(--bg);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;';
+      el.innerHTML = `<div><strong style="font-size:13px;">${data.author}</strong><p class="text-sm" style="margin-top:2px;">${(data.body || '').slice(0, 80)}…</p></div>
+        <button class="btn btn-red" style="padding:5px 10px;font-size:11px;flex-shrink:0;" onclick="deletePost('${d.id}',this.parentElement)"><i class="fas fa-trash"></i></button>`;
+      list.appendChild(el);
+    });
+  });
+}
+
+async function deletePost(id, el) {
+  if (!window.FB) return;
+  await window.FB.deleteDoc(window.FB.doc(window.FB.db, 'posts', id)).catch(() => {});
+  el.remove();
+  showToast('Post deleted');
+}
+
+/* ─────────────────────────── CROP ROTATION ─────────────────────── */
+async function showCropRotation() {
+  document.getElementById('rotation-modal').classList.remove('hidden');
+  const field = appState.fields[0];
+  const prompt = field
+    ? `Current crop: ${field.crop}, soil: ${field.soil}, water: ${field.water}. Suggest an optimal crop rotation plan for next 3 seasons. Consider soil nutrients N:65%, P:48%, K:72%. Give specific crops to grow next.`
+    : 'General crop rotation advice for Telangana, black cotton soil, paddy currently growing. Give crop rotation for next 3 seasons.';
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEYS.GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: 'llama3-70b-8192',
+        messages: [
+          { role: 'system', content: 'You are an agricultural expert. Give concise, practical crop rotation plans for Indian farmers.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 400,
+      }),
+    });
+    const data = await res.json();
+    const answer = data.choices?.[0]?.message?.content || 'Unable to get rotation advice. Check Groq API key.';
+    document.getElementById('rotation-result').innerHTML = `<div class="ai-result"><div class="ai-result-title">🔄 Rotation Plan</div><div class="ai-result-text">${answer}</div></div>`;
+  } catch (e) {
+    document.getElementById('rotation-result').innerHTML = `<p class="text-sm" style="color:var(--red);">Error: ${e.message}</p>`;
+  }
+}
+function closeRotationModal(e) { if (e.target === document.getElementById('rotation-modal')) document.getElementById('rotation-modal').classList.add('hidden'); }
+
+/* ─────────────────────────── DAILY ADVISORY ────────────────────── */
+async function loadDailyAdvisory() {
+  const field = appState.fields[0];
+  const cachedAdv = localStorage.getItem('km_advisory_' + new Date().toDateString());
+  if (cachedAdv) { document.getElementById('advisory-text').innerHTML = `<span class="en">${cachedAdv}</span>`; return; }
+
+  const prompt = field
+    ? `Daily farming advisory for: crop ${field.crop} at ${field.stage} stage, soil: ${field.soil}, water source: ${field.water}, location: Telangana, India. Today's weather: partly cloudy, ~30°C. Give 2-3 actionable tips for today.`
+    : 'Daily farming advisory for paddy crop in Telangana, India. Give 2-3 concise actionable tips for today.';
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEYS.GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: 'llama3-70b-8192',
+        messages: [
+          { role: 'system', content: 'You are a daily farming advisor. Give practical, concise daily tips in 2-3 short bullet points.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 200,
+      }),
+    });
+    const data = await res.json();
+    const answer = data.choices?.[0]?.message?.content || 'Check your Groq API key for personalized advisory.';
+    document.getElementById('advisory-text').innerHTML = `<span class="en">${answer.replace(/\n/g, '<br>')}</span>`;
+    localStorage.setItem('km_advisory_' + new Date().toDateString(), answer);
+  } catch {
+    document.getElementById('advisory-text').innerHTML = `<span class="en">📌 Water crops early morning. 🌡️ Expected hot day – check soil moisture. 💊 Watch for pest signs.</span>`;
+  }
+}
+
+/* ─────────────────────────── TOAST ─────────────────────────────── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ─────────────────────────── HELPERS ───────────────────────────── */
+function formatTime(ts) {
+  if (!ts) return 'just now';
+  const d = ts.toDate ? ts.toDate() : new Date();
+  return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+</script>
+</body>
+</html>
