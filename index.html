@@ -1,46 +1,63 @@
-<!-- API KEYS -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AGROHUB – Smart Farming</title>
+
+<!-- ══════════════════════════════════════════════════════
+     API KEYS — FILL THESE IN MANUALLY
+     ══════════════════════════════════════════════════════ -->
 <script>
   const API_KEYS = {
     FIREBASE_API_KEY:        "AIzaSyD5EvtdcUO9U0Bp97TzcmqiLzmayOBTlCg",
     FIREBASE_AUTH_DOMAIN:    "agrohub-6454a.firebaseapp.com",
     FIREBASE_PROJECT_ID:     "agrohub-6454a",
-    FIREBASE_STORAGE_BUCKET: "agrohub-6454a.appspot.com",
+    FIREBASE_STORAGE_BUCKET: "agrohub-6454a.firebasestorage.app",
     FIREBASE_MSG_SENDER_ID:  "542306944784",
     FIREBASE_APP_ID:         "1:542306944784:web:1735b3ca3f6c7eb4174795",
 
-    GROQ_API_KEY:        "gsk_xxx",
-    OPENWEATHER_API_KEY: "338ad154be0e10acab9f03b36863b3e9",
+    GROQ_API_KEY:            "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",          // https://console.groq.com
+    OPENWEATHER_API_KEY:     "338ad154be0e10acab9f03b36863b3e9",   // https://openweathermap.org/api
   };
 </script>
 
-<!-- FIREBASE -->
+<!-- Firebase SDKs -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { initializeApp }                    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword,
+           createUserWithEmailAndPassword,
+           onAuthStateChanged, signOut }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc,
+           collection, addDoc, getDocs,
+           onSnapshot, query, orderBy,
+           serverTimestamp, deleteDoc,
+           updateDoc }                         from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // ✅ USE API_KEYS PROPERLY
   const firebaseConfig = {
-    apiKey: API_KEYS.FIREBASE_API_KEY,
-    authDomain: API_KEYS.FIREBASE_AUTH_DOMAIN,
-    projectId: API_KEYS.FIREBASE_PROJECT_ID,
-    storageBucket: API_KEYS.FIREBASE_STORAGE_BUCKET,
+    apiKey:            API_KEYS.FIREBASE_API_KEY,
+    authDomain:        API_KEYS.FIREBASE_AUTH_DOMAIN,
+    projectId:         API_KEYS.FIREBASE_PROJECT_ID,
+    storageBucket:     API_KEYS.FIREBASE_STORAGE_BUCKET,
     messagingSenderId: API_KEYS.FIREBASE_MSG_SENDER_ID,
-    appId: API_KEYS.FIREBASE_APP_ID
+    appId:             API_KEYS.FIREBASE_APP_ID,
   };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+  const fbApp  = initializeApp(firebaseConfig);
+  const auth   = getAuth(fbApp);
+  const db     = getFirestore(fbApp);
 
-  // ✅ GLOBAL FUNCTION
-  window.testSignup = function () {
-    createUserWithEmailAndPassword(auth, "test123@gmail.com", "123456")
-      .then(() => alert("WORKING ✅"))
-      .catch(err => alert(err.message));
-  };
+  // Make globally available
+  window.FB = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+                onAuthStateChanged, signOut, doc, setDoc, getDoc,
+                collection, addDoc, getDocs, onSnapshot, query,
+                orderBy, serverTimestamp, deleteDoc, updateDoc };
 </script>
 
-<!-- TEST BUTTON -->
-<button onclick="testSignup()">TEST FIREBASE</button>
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Telugu&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
 /* ═══════════════════════════ DESIGN TOKENS ═══════════════════════════ */
 :root {
   --green:       #2d6a4f;
@@ -359,7 +376,7 @@ a { text-decoration: none; color: inherit; }
      ══════════════════════════════════════════════════════════════════ -->
 <div id="auth-wrap">
   <div class="auth-card">
-    <div class="auth-logo">🌾 <span>AGRO</span>HUB</div>
+    <div class="auth-logo">🌾 <span>Krishi</span>Mitra</div>
     <p class="auth-sub">
       <span class="en">Smart Farming Assistant</span>
       <span class="te">స్మార్ట్ వ్యవసాయ సహాయకుడు</span>
