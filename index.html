@@ -1,42 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>AGROHUB – Smart Farming</title>
-
-<!-- ══════════════════════════════════════════════════════
-     API KEYS — FILL THESE IN MANUALLY
-     ══════════════════════════════════════════════════════ -->
+<!-- API KEYS -->
 <script>
   const API_KEYS = {
     FIREBASE_API_KEY:        "AIzaSyD5EvtdcUO9U0Bp97TzcmqiLzmayOBTlCg",
     FIREBASE_AUTH_DOMAIN:    "agrohub-6454a.firebaseapp.com",
     FIREBASE_PROJECT_ID:     "agrohub-6454a",
-    FIREBASE_STORAGE_BUCKET: "agrohub-6454a.firebasestorage.app",
+    FIREBASE_STORAGE_BUCKET: "agrohub-6454a.appspot.com",
     FIREBASE_MSG_SENDER_ID:  "542306944784",
     FIREBASE_APP_ID:         "1:542306944784:web:1735b3ca3f6c7eb4174795",
 
-    GROQ_API_KEY:            "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",          // https://console.groq.com
-    OPENWEATHER_API_KEY:     "338ad154be0e10acab9f03b36863b3e9",   // https://openweathermap.org/api
+    GROQ_API_KEY:        "gsk_xxx",
+    OPENWEATHER_API_KEY: "338ad154be0e10acab9f03b36863b3e9",
   };
+</script>
+
+<!-- FIREBASE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  // ✅ USE API_KEYS PROPERLY
   const firebaseConfig = {
-    apiKey:           AIzaSyD5EvtdcUO9U0Bp97TzcmqiLzmayOBTlCg,
-    authDomain:        agrohub-6454a.firebaseapp.com,
-    projectId:         agrohub-6454a,
-    storageBucket:     agrohub-6454a.firebasestorage.app,
-    messagingSenderId: 542306944784,
-    appId:             1:542306944784:web:1735b3ca3f6c7eb4174795,
+    apiKey: API_KEYS.FIREBASE_API_KEY,
+    authDomain: API_KEYS.FIREBASE_AUTH_DOMAIN,
+    projectId: API_KEYS.FIREBASE_PROJECT_ID,
+    storageBucket: API_KEYS.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: API_KEYS.FIREBASE_MSG_SENDER_ID,
+    appId: API_KEYS.FIREBASE_APP_ID
   };
- const app = initializeApp(firebaseConfig);
+
+  const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // 🔥 ONE BUTTON TEST (no HTML needed)
+  // ✅ GLOBAL FUNCTION
   window.testSignup = function () {
     createUserWithEmailAndPassword(auth, "test123@gmail.com", "123456")
       .then(() => alert("WORKING ✅"))
@@ -44,12 +39,8 @@
   };
 </script>
 
+<!-- TEST BUTTON -->
 <button onclick="testSignup()">TEST FIREBASE</button>
-
-<link href="https://fonts.googleapis.com/css2?family=Tiro+Telugu&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
-<style>
 /* ═══════════════════════════ DESIGN TOKENS ═══════════════════════════ */
 :root {
   --green:       #2d6a4f;
